@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+
+  cihm-public-cos:
+    build: .
+    image: cihm-public-cos:latest
+    ports:
+      - "80:80"
+
+  cihm-cantaloupe:
+    build: ../cihm-cantaloupe
+    image: cihm-cantaloupe:latest
+    ports:
+      - "8182:8182"
+    volumes:
+      - /repository:/repository
+
