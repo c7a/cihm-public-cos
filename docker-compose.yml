@@ -7,6 +7,12 @@ services:
     image: cihm-public-cos:latest
     ports:
       - "80:80"
+    networks:
+      default:
+      publicnet:
+        # This is the default external public IP address for the test environment. Override. 
+        ipv4_address: 209.87.229.22
+
 
   cihm-cantaloupe:
     build: ../cihm-cantaloupe
@@ -16,3 +22,16 @@ services:
     volumes:
       - /repository:/repository
 
+
+networks:
+  publicnet:
+  # Make a connection to existing br1 bridge, connected to the VLAN for the external interface
+    driver: "bridge"
+    driver_opts:
+      # The external interface shoudl always be 'br1', but override can be used if not.
+      com.docker.network.bridge.name: "br1"
+      com.docker.network.bridge.enable_icc: "false"
+    ipam:
+      config:
+        # This is the default external subnet for the test environment.  Override.
+        - subnet: 209.87.229.16/29
