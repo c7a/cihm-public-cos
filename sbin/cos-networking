@@ -1,0 +1,57 @@
+#!/usr/bin/env perl
+
+use Config::General;
+use File::Slurp;
+
+# Use network namespaces to update routing table within the content server
+# container which has a publicly routed internet address.
+
+# Unfortunately this script must be run as root to manipulate the containers
+# network. Be very careful what gets added to this script.
+
+# Only root should have write access to this file!
+my $configfile="/etc/canadiana/cos-networking.conf";
+
+if (! -f $configfile) {
+    die "Can't find config: $configfile\n";
+}
+$conf = Config::General->new($configfile);
+my %config = $conf->getall;
+
+my $container=$config{container};
+my $publicgw=$config{publicgateway};
+
+my $pid=`/usr/bin/docker inspect -f '{{.State.Pid}}' $container`;
+chomp $pid;
+
+if (! -e "/proc/$pid/ns/net") {
+    die "Can't find process for '$container' at /proc/$pid/ns/net\n";
+}
+
+unlink "/var/run/netns/$pid";
+symlink "/proc/$pid/ns/net","/var/run/netns/$pid";
+
+open (ROUTES, "/sbin/ip netns exec $pid ip route |");
+
+my $gateway;
+while (<ROUTES>) {
+    chomp;
+    my @line = split;
+    if ($line[0] eq 'default' && $line[1] eq 'via') {
+        $gateway=$line[2];
+    };
+}
+if (!$gateway) {
+    die "Existing default gateway not found!\n";
+}
+
+# If the default gateway is different than what is configured, then
+# assume it was the docker assigned gateway.
+if ($gateway ne $publicgw) {
+    # Use the previously assigned gateway for private network addresses.
+    `/sbin/ip netns exec $pid ip route replace 10.0.0.0/8 via $gateway`;
+    `/sbin/ip netns exec $pid ip route replace 192.168.0.0/16 via $gateway`;
+
+    # Change the default gateway to go via the public interface
+    `/sbin/ip netns exec $pid ip route replace default via $publicgw`;
+}
