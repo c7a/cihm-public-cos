@@ -3,6 +3,7 @@ version: "3"
 services:
 
   cihm-public-cos:
+    container_name: cihm-public-cos
     build: .
     image: cihm-public-cos:latest
     ports:
@@ -12,7 +13,12 @@ services:
       publicnet:
         # This is the default external public IP address for the test environment. Override. 
         ipv4_address: 209.87.229.22
-
+    volumes:
+      - /var/log/apache2:/var/log/apache2
+      - /repository:/repository:ro
+    environment:
+      APACHE_LOG_DIR: '/var/log/apache2'
+      APP_DOMAIN: 'dev.canadiana.ca'
 
   cihm-cantaloupe:
     build: ../cihm-cantaloupe
@@ -20,7 +26,19 @@ services:
     ports:
       - "8182:8182"
     volumes:
-      - /repository:/repository
+      - /repository:/repository:ro
+
+  cihm-cookie-authorizer:
+    build: ../cihm-cookie-authorizer
+    image: cihm-cookie-authorizer:latest
+    command: yarn run start
+
+  cihm-file-access:
+    build: ../cihm-file-access
+    image: cihm-file-access:latest
+    command: yarn run start
+    volumes:
+      - /repository:/repository:ro
 
 
 networks:
