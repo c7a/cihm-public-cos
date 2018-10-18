@@ -1,4 +1,4 @@
-FROM httpd:2.4-alpine
+FROM httpd:2.4.35-alpine
 
 # Need to build this module, as not provided by Alpine
 COPY ./mod_xsendfile.c /usr/local/apache2/mod_xsendfile.c
